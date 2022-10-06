@@ -143,22 +143,12 @@ plot(dates,CONV_COVID_Ham(1,:))
 title("Hamming Smoothing row 1")
 
 %% DAYAN's K-means
-[clust_ham,centroids_ham] = kmeans(CONV_COVID_Ham,9,'Replicates',100);
-[clust_rect,centroids_rect] = kmeans(CONV_COVID_Rect,9,'Replicates',100);
-[clust,centroids] = kmeans(CNTY_COVID_TRAIN,9,'Replicates',100);
-
-sill_Val_ham = silhouette(CONV_COVID_Ham,clust_ham);
-
-sill_Val_rect = silhouette(CONV_COVID_Rect,clust_rect);
-
-sill_Val = silhouette(CNTY_COVID_TRAIN,clust);
+[clust_ham,centroids_ham] = kmeans(CONV_COVID_Ham,9,'Replicates',1000);
+[clust_rect,centroids_rect] = kmeans(CONV_COVID_Rect,9,'Replicates',1000);
 
 figure
-silhouette(CONV_COVID_Ham,clust_ham);
-figure
-silhouette(CONV_COVID_Rect,clust_rect);
-figure
-silhouette(CNTY_COVID_TRAIN,clust_rect);
+sill_Val_ham = silhouette(CNTY_COVID_TRAIN,clusters);
+sill_Val_rect = silhouette(CNTY_COVID_TRAIN,clusters);
 
 %% K-means bull she-ite
 %{

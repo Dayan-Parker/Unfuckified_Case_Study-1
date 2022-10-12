@@ -2,42 +2,8 @@
 clear, clc, close all
 
 load cluster_covid_data.mat
-
-%convolution smoothing the test data
-CONV_COVID_Rect_TEST = zeros(45,130);
-  
-
-for i = 1:45 
-    CONV_COVID_Rect_TEST(i,:) = conv(CNTY_COVID_TEST(i,:),sm_rect,"same");
-end
-
-
-clusters_sort = sortrows(clust_rect,'descend');
-
-%findig the average vectors for each cluster from the test data
-
-avg_1 = mean(CONV_COVID_Rect(clusters_sort == 1,:));
-avg_2 = mean(CONV_COVID_Rect(clusters_sort == 2,:));
-avg_3 = mean(CONV_COVID_Rect(clusters_sort == 3,:));
-avg_4 = mean(CONV_COVID_Rect(clusters_sort == 4,:));
-avg_5 = mean(CONV_COVID_Rect(clusters_sort == 5,:));
-avg_6 = mean(CONV_COVID_Rect(clusters_sort == 6,:));
-avg_7 = mean(CONV_COVID_Rect(clusters_sort == 7,:));
-avg_8 = mean(CONV_COVID_Rect(clusters_sort == 8,:));
-avg_9 = mean(CONV_COVID_Rect(clusters_sort == 9,:));
-
-%findig the average vectors for each division in the test data
-
-avg_labeled_1 = mean(CONV_COVID_Rect_TEST(CENSUS_TEST == 1,:));
-avg_labeled_2 = mean(CONV_COVID_Rect_TEST(CENSUS_TEST == 2,:));
-avg_labeled_3 = mean(CONV_COVID_Rect_TEST(CENSUS_TEST == 3,:));
-avg_labeled_4 = mean(CONV_COVID_Rect_TEST(CENSUS_TEST == 4,:));
-avg_labeled_5 = mean(CONV_COVID_Rect_TEST(CENSUS_TEST == 5,:));
-avg_labeled_6 = mean(CONV_COVID_Rect_TEST(CENSUS_TEST == 6,:));
-avg_labeled_7 = mean(CONV_COVID_Rect_TEST(CENSUS_TEST == 7,:));
-avg_labeled_8 = mean(CONV_COVID_Rect_TEST(CENSUS_TEST == 8,:));
-avg_labeled_9 = mean(CONV_COVID_Rect_TEST(CENSUS_TEST == 9,:));
-
+load good_clusters.mat
+load good_label.mat
 %% Labeling through graphical analysis
 
 
@@ -227,10 +193,10 @@ division_7 = idx_7;
 division_8 = idx_8;
 division_9 = idx_9;
 
-
 centriods = centroids_rect;
-centriod_labels = ["Division 1"; "Division 7"; "Division 4"; "Division 3"; "Division 8"; "Division 5"; "Division 6"; "Division 2"; "Division 1"];
+centriod_label = ["Division 1"; "Division 4"; "Division 2"; "Division 6"; "Division 5"; "Division 8"; "Division 3"; "Division 7"; "Division 9"];
 labeled_centriods = [centriod_labels,centroids_rect];
+
 
 
 save classify_covid_data.mat

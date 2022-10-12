@@ -2,11 +2,11 @@ clc,close all
 load cluster_covid_data.mat
 load classify_covid_data.mat
 load good_clusters.mat
-load good_labels.mat
+load good_label.mat
 
 %centriods 
-centriods = centriodss;
-centroid_labels = centriod_labelss;
+centriods = l;
+centroid_labels = centriod_labels;
 
 %% linear transformations
 %convolution smoothing the test data

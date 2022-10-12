@@ -240,7 +240,7 @@ end
 %for cluster 8
 if sum(size(CONV_COVID_Rect(clusters_sort == 8,:))) > sum([1,130])
     avg_8 = mean(CONV_COVID_Rect(clusters_sort == 8,:)); 
-    elseg
+else
     avg_8 = CONV_COVID_Rect(clusters_sort == 8,:);
 end
 
@@ -360,9 +360,10 @@ division_7 = idx_7;
 division_8 = idx_8;
 division_9 = idx_9;
 
+centriodss = centroids_rect;
+centriod_labelss = ["Division 9"; "Division 6"; "Division 3"; "Division 7"; "Division 2"; "Division 4"; "Division 5"; "Division 8"; "Division 1"];
+labeled_centriods = [centriod_labelss,centroids_rect];
 
-centriods = centriods_rect;
-centriod_labels = ["Division 1"; "Division 2"; "Division 4"; "Division 3"; "Division 8"; "Division 5"; "Division 6"; "Division 2"; "Division 1"]
-labeled_centriods = [centriod_labels,centroids_rect];
+good_clusters = centriodss;
 
-
+save good_clusters.mat centriods

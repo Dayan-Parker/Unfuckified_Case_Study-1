@@ -1,0 +1,263 @@
+% LABEL EACH PLOT and INCLUDE IN THE REPORT
+clc, clear, close all
+load('COVIDbyCounty.mat')  %load the data
+temp = CNTY_COVID.';   %transpose the COVID series so the columns = counties, rows = timestamps
+temp1 = corr(temp);  %run correlation that looks at each column = county and compares them
+plot(temp1);  %plot shows there is real correlation, which makes clustering worthwhile
+max1 = max(temp1);
+subplot(1,2,1)   % look at the correlation trends for different counties
+plot(temp1(1,:));
+subplot(1,2,2)
+plot(temp1(10,:));
+%these data are worth clustering
+
+%CNTY_COVID_TRAIN=[CNTY_COVID(1:215,:)];  %segment the data into train / test
+%CNTY_COVID_TEST=[CNTY_COVID(216:225,:)];  %segment the data into train / text
+
+%APPROACH #1: No linear transformation applied to the data set; only segment data into training set 180x130 and test set 45x130, interleaving among divisions for geographic diversity in the two sets
+
+%Leave five middle rows in between the beginning and end rows for each division
+CNTY_COVID_TRAIN1=[CNTY_COVID(1:10,:)];%test set is 11:15
+CNTY_COVID_TRAIN2=[CNTY_COVID(16:35,:)];%test set is 36:40
+CNTY_COVID_TRAIN3=[CNTY_COVID(41:60,:)];%test set is 61:65
+CNTY_COVID_TRAIN4=[CNTY_COVID(66:85,:)];%test set is 86:90
+CNTY_COVID_TRAIN5=[CNTY_COVID(91:110,:)];%test set is 111:115
+CNTY_COVID_TRAIN6=[CNTY_COVID(116:135,:)];%test set is 136:140
+CNTY_COVID_TRAIN7=[CNTY_COVID(141:160,:)];%test set is 161:165
+CNTY_COVID_TRAIN8=[CNTY_COVID(166:185,:)];%test set is 186:190
+CNTY_COVID_TRAIN9=[CNTY_COVID(191:210,:)];%test set is 211:215
+CNTY_COVID_TRAIN10=[CNTY_COVID(216:225,:)];
+CNTY_COVID_TRAIN=cat(1,CNTY_COVID_TRAIN1,CNTY_COVID_TRAIN2,...
+    CNTY_COVID_TRAIN3,CNTY_COVID_TRAIN4,CNTY_COVID_TRAIN5,...
+    CNTY_COVID_TRAIN6,CNTY_COVID_TRAIN7,CNTY_COVID_TRAIN8,...
+    CNTY_COVID_TRAIN9,CNTY_COVID_TRAIN10);
+
+%combine all those left-out middle rows in each division to form the test set
+CNTY_COVID_TEST1=[CNTY_COVID(11:15,:)];%test set is 11:15
+CNTY_COVID_TEST2=[CNTY_COVID(36:40,:)];%test set is 36:40
+CNTY_COVID_TEST3=[CNTY_COVID(61:65,:)];%test set is 61:65
+CNTY_COVID_TEST4=[CNTY_COVID(86:90,:)];%test set is 86:90
+CNTY_COVID_TEST5=[CNTY_COVID(111:115,:)];%test set is 111:115
+CNTY_COVID_TEST6=[CNTY_COVID(136:140,:)];%test set is 136:140
+CNTY_COVID_TEST7=[CNTY_COVID(161:165,:)];%test set is 161:165
+CNTY_COVID_TEST8=[CNTY_COVID(186:190,:)];%test set is 186:190
+CNTY_COVID_TEST9=[CNTY_COVID(211:215,:)];%test set is 211:215
+CNTY_COVID_TEST=cat(1,CNTY_COVID_TEST1,CNTY_COVID_TEST2,...
+    CNTY_COVID_TEST3,CNTY_COVID_TEST4,CNTY_COVID_TEST5,...
+    CNTY_COVID_TEST6,CNTY_COVID_TEST7,CNTY_COVID_TEST8,...
+    CNTY_COVID_TEST9);
+
+
+SUM_CNTY_COVID_TRAIN=sum(CNTY_COVID_TRAIN.');  %for each county, across its timestamps, add the incremental # of cases for the case total
+figure
+pareto(SUM_CNTY_COVID_TRAIN,1);
+
+
+temp3 = kmeans(CNTY_COVID_TRAIN,9);  %try clustering with 9 clusters, based on having 9 divisions
+sil1 = silhouette(CNTY_COVID_TRAIN, temp3);  %compute quality of clustering w/ silhouette
+figure
+[sil1, H] = silhouette(CNTY_COVID_TRAIN, temp3);  %plot the silhouette values, to see if there are negatives or low values (bad)
+
+%clustering into 9 divisions yields poor silhouette values, we can and should do better
+
+%so let’s try clustering with different values of k from 2:50 and then plotting the Sum of Sq distances from the respective centroids, to see if there’s an ‘elbow’ that shows us the optimal # of clusters to have
+count=1;
+for i=1:50
+    [junk1,junk2,sumd] = kmeans(CNTY_COVID_TRAIN,i);
+    tempk(:,count)=junk1;
+    silk(:,count)=silhouette(CNTY_COVID_TRAIN,tempk(:,count));
+    Sum_of_SquDist(count)=sum(sumd);
+    count=count+1;
+end
+figure
+plot(Sum_of_SquDist);
+
+%looking at this plot, we see somewhat of an ‘elbow’ in the area from k=4 through k=9
+%Let’s look at silhouette graphs for different k values to see what’s best
+[silk(:,9), H] = silhouette(CNTY_COVID_TRAIN, tempk(:,9));
+[silk(:,8), H] = silhouette(CNTY_COVID_TRAIN, tempk(:,8));
+[silk(:,7), H] = silhouette(CNTY_COVID_TRAIN, tempk(:,7));
+[silk(:,6), H] = silhouette(CNTY_COVID_TRAIN, tempk(:,6));
+[silk(:,5), H] = silhouette(CNTY_COVID_TRAIN, tempk(:,5));
+[silk(:,4), H] = silhouette(CNTY_COVID_TRAIN, tempk(:,4));
+
+% k=5 gives us the best silhouette so let’s go with k=5
+[tempk(:,5),C,sumd]=kmeans(CNTY_COVID_TRAIN,5);
+[silk(:,5), H] = silhouette(CNTY_COVID_TRAIN, tempk(:,5));
+
+%now let’s get the centroids matrix C for k=5
+centroids = C;
+%take the 45 test vectors from CNTY_COVID_TEST and figure out which of the 5 cluster centroids it’s closest to
+%compute its Euclidean distance
+D=pdist2(centroids,CNTY_COVID_TEST);
+%return the index of the closest cluster distance for each of the 45 counties in I
+[D,I]=pdist2(centroids,CNTY_COVID_TEST,'euclidean','smallest',1);
+
+%I has one row with 45 entries, each tells the cluster of the test county,
+I(1:10); %let;s see what cluster the first 10 test counties were assigned to
+
+% we got   5     4     3     5     4     4     4     4     4     4
+
+%now we figure out the meaning of these centroids – do they represent times of peak volumes, times of a certain magnitude, times when there was a spike in certain geographies?
+
+%plot the case counts of test counties 1,4 which were mapped to the same cluster #5, what do we see? What label should we give this?
+
+figure
+plot(CNTY_COVID_TEST(1,:));
+hold on
+plot(CNTY_COVID_TEST(4,:));
+hold off
+%LABEL for cluster #5: we see 5 peaks med, small, large, super large, small
+
+% plot the case counts of test counties 2,5,6:11 which were mapped to the same cluster #4, what do we see? What label should we give this?
+figure
+plot(CNTY_COVID_TEST(2,:));
+hold on
+plot(CNTY_COVID_TEST(5,:));
+plot(CNTY_COVID_TEST(6,:));
+plot(CNTY_COVID_TEST(7,:));
+plot(CNTY_COVID_TEST(8,:));
+plot(CNTY_COVID_TEST(9,:));
+plot(CNTY_COVID_TEST(10,:));
+plot(CNTY_COVID_TEST(11,:));
+hold off
+%LABEL for cluster #4:  we see early med, med, high, small, super large, med peaks
+
+%looking at I again, plot the other cluster combos from the test set, look for patterns
+%counties(3,12,13,14,15) are cluster 3
+figure
+plot(CNTY_COVID_TEST(3,:));
+hold on
+plot(CNTY_COVID_TEST(12,:));
+plot(CNTY_COVID_TEST(13,:));
+plot(CNTY_COVID_TEST(14,:));
+plot(CNTY_COVID_TEST(15,:));
+hold off
+%LABEL for cluster #3: we see high, med, super high, small
+
+%counties(24,26,27,28,29) are cluster 2
+figure
+plot(CNTY_COVID_TEST(24,:));
+hold on
+plot(CNTY_COVID_TEST(26,:));
+plot(CNTY_COVID_TEST(27,:));
+plot(CNTY_COVID_TEST(28,:));
+plot(CNTY_COVID_TEST(29,:));
+hold off
+%LABEL for cluster #2: we see it all over the place with some negative and high volatility but low totals
+%LABEL for cluster #1: unknown; not a single one of the test vectors was assigned to cluster #1
+
+%now create a (k=5)x1 matrix of centroid labels with text strings for our descriptors of each centroid/cluster using the labels above
+
+%centroids_labels = ['unknown';'volatile';'high-med-superhigh-small';'med-med-high-small-superhigh-med';'med-small-high-superhigh-small'];
+
+%in this Approach #1 there was no linear transformation on the original data set
+
+%% Clustering
+
+%APPROACH #2: now let’s try a linear transformation on the training data by adding it across all the counties in a given geographic division in the CENSUS data set, for each of the 9 divisions in the CENSUS
+% we want to produce a matrix that has 9 rows x 130 columns = sum of all training data counties in each of those 9 divisions across time
+
+
+
+SUM_DIVISION_COVID_TRAIN = zeros(9,130);
+tempsum=zeros(1,130);
+for j=1:9
+    for r=1:180
+        if CNTY_CENSUS{r,3} == j
+            tempsum=(CNTY_COVID_TRAIN(r,:));
+            SUM_DIVISION_COVID_TRAIN(j,:)=SUM_DIVISION_COVID_TRAIN(j,:) + tempsum;
+            %the new case counts for that division = whatever it was before + tempsum
+        end
+    end
+end
+
+%plot the 9 divisions in terms of their total case counts across all the counties in each division
+figure
+plot(SUM_DIVISION_COVID_TRAIN(1,:));
+hold on
+plot(SUM_DIVISION_COVID_TRAIN(2,:));
+plot(SUM_DIVISION_COVID_TRAIN(3,:));
+plot(SUM_DIVISION_COVID_TRAIN(4,:));
+plot(SUM_DIVISION_COVID_TRAIN(5,:));
+plot(SUM_DIVISION_COVID_TRAIN(6,:));
+plot(SUM_DIVISION_COVID_TRAIN(7,:));
+plot(SUM_DIVISION_COVID_TRAIN(8,:));
+plot(SUM_DIVISION_COVID_TRAIN(9,:));
+hold off
+
+%generate an elbow diagram to see if any k values better than others for this newly-grouped training data set of 9 divisions?
+count=1;
+for i=1:8
+    [junk1,junk2,sumd] = kmeans(SUM_DIVISION_COVID_TRAIN,i);
+    tempksum(:,count)=junk1;
+    silkksum(:,count)=silhouette(SUM_DIVISION_COVID_TRAIN,tempksum(:,count));
+    %figure
+    Sum_of_SquDist_k0(count)=sum(sumd);
+    count=count+1;
+end
+figure
+plot(Sum_of_SquDist_k0);
+
+%shows k=2 or k=3 as elbow point, so check silhouette plots at k=3 & k=4 to see which is best
+[silkksum(:,2), H] = silhouette(SUM_DIVISION_COVID_TRAIN, tempksum(:,2));
+[silkksum(:,3), H] = silhouette(SUM_DIVISION_COVID_TRAIN, tempksum(:,3));
+
+%k=3 has the best silhouette values, even better than k=2
+%so now run kmeans with k=3 on the training data and capture the centroids
+[tempksum(:,3),Csum,sumd]=kmeans(SUM_DIVISION_COVID_TRAIN,3);
+[silkksum(:,3), H] = silhouette(SUM_DIVISION_COVID_TRAIN, tempksum(:,3));
+
+centroids = Csum;
+
+%take the 45 test vectors from CNTY_COVID_TEST and figure out which of the 3 cluster centroids it’s closest to
+%compute its Euclidean distance
+D=pdist2(centroids,CNTY_COVID_TEST);
+%return the index of the closest cluster distance for each of the 45 counties in I
+[D,I]=pdist2(centroids,CNTY_COVID_TEST,'euclidean','smallest',1);
+
+%I has one row with 45 entries, each tells the cluster of the test county,
+%I let;s see what cluster the test counties were assigned to
+% they were ALL assigned to the same cluster #2 (??!)
+
+
+%% Classifying
+%plot some of the counties and look for shared characteristics
+figure
+plot(CNTY_COVID_TEST(2,:));
+hold on
+plot(CNTY_COVID_TEST(10,:));
+plot(CNTY_COVID_TEST(27,:));
+plot(CNTY_COVID_TEST(34,:));
+plot(CNTY_COVID_TEST(45,:));
+hold off
+%LABEL for cluster #2: low case counts with 5 peaks
+
+tempksum(:,3) %shows us which division groups 1-9 of the training data were assigned to which of the 3 clusters
+% 3     3    1     1     1     1     1     2     2
+
+%all of these were assigned to cluster #1
+figure
+hold on
+plot(SUM_DIVISION_COVID_TRAIN(2,:));
+plot(SUM_DIVISION_COVID_TRAIN(3,:));
+plot(SUM_DIVISION_COVID_TRAIN(4,:));
+plot(SUM_DIVISION_COVID_TRAIN(5,:));
+hold off
+%LABEL for cluster #1: super high case counts with 4 peaks
+
+%all of these were assigned to cluster #3
+figure
+hold on
+plot(SUM_DIVISION_COVID_TRAIN(1,:));
+plot(SUM_DIVISION_COVID_TRAIN(2,:));
+hold off
+%LABEL for cluster #3: super high case counts with 3 peaks
+
+
+%generate labels
+%now create a (k=3)x1 matrix of centroid labels with text strings for our descriptors of each centroid/cluster using the labels above
+
+%centroids_labels = ['super high 4 peaks';'low 5 peaks';'super high 3 peaks'];
+
+%CONCLUSION: in this Approach #2 there was a linear transformation on the original data set by combining them across geographic divisions and then using those summed up series to derive the clusters.  Clearly this approach eliminates a bit of the noise in the 180 individual county trajectories in the training data set by combining them into just 9 total trajectories, which leads to much more efficient clustering, going from 5 clusters in Approach 1 to just 3 clusters in Approach 2 with clearer differentiation among the cluster members.
